@@ -9,11 +9,22 @@ class Null:
 
 Null = Null()
 
+class ExcCapsule:
+    def __init__(self, exc):
+        self.exc = exc
+
+    def __repr__(self):
+        return f'ExcCapsule({self.exc!r})'
+
 def nullwrap(func):
     '''Wraps a function to allow it to be passed null py_objects.'''
     ret = func.__annotations__.get('return') or 'py_object'
     def wrapper(*args) -> ret:
-        return func(*map(lambda arg:ctypes.cast(arg, ctypes.py_object).value if arg else Null, args))
+        try:
+            return func(*map(lambda arg:ctypes.cast(arg, ctypes.py_object).value if arg else Null, args))
+        except Exception as e:
+            return ExcCapsule(e) #This allows people using this module to handle their own exceptions
+            # TODO fix raising exceptions properly instead of doing this shit
     for i in range(func.__code__.co_argcount):
         dict.__setitem__(wrapper.__annotations__, i, 'c_void_p')
     return wrapper
@@ -40,7 +51,7 @@ def get_cfunc_wrapper(func, intret=False, nullret=False, argcount=None):
         *argtypes
     )
 
-def edit(cls, attr=None, name=None, cfunc_wrapper=None, intret=False, nullret=False, argcount=None):
+def edit(cls, attr=None, name=None, cfunc_wrapper=None, intret=False, nullret=False, argcount=None, safe=True):
     '''Decorator that allows for the modification of python base types'''
     cls_struct = structs.c_typeobj(cls)
     def dec(func):
@@ -59,6 +70,10 @@ def edit(cls, attr=None, name=None, cfunc_wrapper=None, intret=False, nullret=Fa
         if spec_struct:
             spec_addr = getattr(cls_struct, spec_struct[0])
             if spec_addr is None:
+                if safe:
+                    raise Exception('Creating new structs is not safe, set safe=False in the call to edit to enable')
+                # the following code is not memory safe
+                # here there be segfaults
                 new_s = tuple.__getitem__(spec_struct, 1)()
                 obj = structs.c_obj(new_s)
                 obj.ob_refcnt = int.__add__(obj.ob_refcnt, 1)
