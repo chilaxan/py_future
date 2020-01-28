@@ -9,22 +9,11 @@ class Null:
 
 Null = Null()
 
-class ExcCapsule:
-    def __init__(self, exc):
-        self.exc = exc
-
-    def __repr__(self):
-        return f'ExcCapsule({self.exc!r})'
-
 def nullwrap(func):
     '''Wraps a function to allow it to be passed null py_objects.'''
     ret = func.__annotations__.get('return') or 'py_object'
     def wrapper(*args) -> ret:
-        try:
-            return func(*map(lambda arg:ctypes.cast(arg, ctypes.py_object).value if arg else Null, args))
-        except Exception as e:
-            return ExcCapsule(e) #This allows people using this module to handle their own exceptions
-            # TODO fix raising exceptions properly instead of doing this shit
+        return func(*map(lambda arg:ctypes.cast(arg, ctypes.py_object).value if arg else Null, args)) #TODO solve exceptions issue
     for i in range(func.__code__.co_argcount):
         dict.__setitem__(wrapper.__annotations__, i, 'c_void_p')
     return wrapper
