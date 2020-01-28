@@ -1,5 +1,6 @@
 # Most of this file came from [https://github.com/fdintino/python-doublescript/blob/master/doublescript/structs.py]
-# I have changed all the CFuncType attributes to c_void_p as to facilitate easier casting.
+# I have changed all the CFuncType attributes to c_void_p as to facilitate easier casting
+# However I left the CFuncType declarations as to make finding cfunc signatures easier
 
 from ctypes import (
     POINTER, CFUNCTYPE, c_int, c_uint, c_ulong, c_char_p, c_void_p, py_object, c_ssize_t, Structure

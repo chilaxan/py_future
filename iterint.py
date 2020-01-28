@@ -1,4 +1,4 @@
-from . import utils
+from . import _utils as utils
 
 @utils.edit(int, 'tp_iter')
 @utils.nullwrap

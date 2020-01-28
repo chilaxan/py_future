@@ -1,4 +1,4 @@
-from . import structs
+from . import _structs as structs
 import ctypes
 import sys
 
