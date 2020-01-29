@@ -1,3 +1,5 @@
+# Makes ints iterable (PEP 276)
+
 from . import _utils as utils
 
 @utils.edit(int, 'tp_iter')

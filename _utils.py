@@ -1,3 +1,5 @@
+# This file uses dunder methods heavily as to make sure it functions as long as possible as python crumbles around it
+
 from . import _structs as structs
 import ctypes
 import sys
@@ -18,6 +20,10 @@ def nullwrap(func):
         dict.__setitem__(wrapper.__annotations__, i, 'c_void_p')
     return wrapper
 
+def inc_ref(obj):
+    o = structs.c_obj(obj)
+    o.ob_refcnt = int.__add__(o.ob_refcnt, 1)
+
 def get_cfunc_wrapper(func, intret=False, nullret=False, argcount=None):
     '''
     Attempts to get the appropriate CFUNCTYPE wrapper for the passed python function using annotations
@@ -34,7 +40,7 @@ def get_cfunc_wrapper(func, intret=False, nullret=False, argcount=None):
             restype = None
         else:
             restype = ctypes.py_object
-        argtypes = [ctypes.py_object]*(argcount or func.__code__.co_argcount)
+        argtypes = list.__mul__([ctypes.py_object], (argcount or func.__code__.co_argcount))
     return ctypes.CFUNCTYPE(
         restype,
         *argtypes
@@ -63,9 +69,10 @@ def edit(cls, attr=None, name=None, cfunc_wrapper=None, intret=False, nullret=Fa
                     raise Exception('Creating new structs is not safe, set safe=False in the call to edit to enable')
                 # the following code is not memory safe
                 # here there be segfaults
+                # TODO make this memory safe
                 new_s = tuple.__getitem__(spec_struct, 1)()
-                obj = structs.c_obj(new_s)
-                obj.ob_refcnt = int.__add__(obj.ob_refcnt, 1)
+                inc_ref(new_s)
+                new_s_p = ctypes.cast(ctypes.addressof(new_s), ctypes.POINTER(type(new_s)))
                 setattr(cls_struct, tuple.__getitem__(spec_struct, 0), id(new_s))
             cls_struct = tuple.__getitem__(spec_struct, 1).from_address(
                 getattr(
@@ -78,8 +85,7 @@ def edit(cls, attr=None, name=None, cfunc_wrapper=None, intret=False, nullret=Fa
         cfunc = cfunc_wrapper(func)
         cfunc_addr = ctypes.cast(cfunc, ctypes.c_void_p)
         if hasattr(cls_struct, attr):
-            obj = structs.c_obj(cfunc)
-            obj.ob_refcnt = int.__add__(obj.ob_refcnt, 1)
+            inc_ref(cfunc)
             setattr(cls_struct, attr, cfunc_addr)
         else:
             raise Exception('Invalid Arguments, [attr] must be a valid struct attribute')

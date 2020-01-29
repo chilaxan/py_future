@@ -1,3 +1,5 @@
+# Makes python dictionary values settable via attributes
+
 from . import _utils as utils
 
 @utils.edit(dict, 'tp_getattro')
