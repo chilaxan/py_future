@@ -4,8 +4,10 @@ Several examples are included, including ``jsdict`` and ``iterint``.
 
 ### JavaScript dictionaries
 Makes python dictionary values settable via attributes
+
 <details>
   <summary>Example Usage</summary>
+  
 ```py
 from py_future import jsdict
 
@@ -20,10 +22,12 @@ del x.a
 
 print(x) # {}
 ```
+
 </details>
 
 <details>
   <summary>Implementation</summary>
+  
 ```py
 # py_future/jsdict.py
 
@@ -51,12 +55,15 @@ def dict_setattro(self, key, val) -> 'c_int':
     dict.__setitem__(self, key, val)
     return 0
 ```
+
 </details>
 
 ### Iterable Integers (PEP 276)
+
 Makes integers iterable
 <details>
   <summary>Example Usage</summary>
+  
 ```py
 from py_future import iterint
 
@@ -65,10 +72,12 @@ for i in 10:
 
 # prints 0 to 9
 ```
+
 </details>
 
 <details>
   <summary>Implementation</summary>
+  
 ```py
 # py_future/iterint.py
 
@@ -79,4 +88,5 @@ from . import _utils as utils
 def int_iter(self):
     yield from range(self)
 ```
+
 </details>
