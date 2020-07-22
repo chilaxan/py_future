@@ -3,6 +3,8 @@
 from . import _structs as structs
 import ctypes
 import sys
+import atexit
+import gc
 
 class Null:
     '''placeholder null singleton (not actually a null value)'''
@@ -20,9 +22,22 @@ def nullwrap(func):
         dict.__setitem__(wrapper.__annotations__, i, 'c_void_p')
     return wrapper
 
-def inc_ref(obj):
+refs = []
+
+def inc_ref(obj, location):
     o = structs.c_obj(obj)
     o.ob_refcnt = int.__add__(o.ob_refcnt, 1)
+    if (obj, location) not in refs:
+        refs.append((obj, location))
+
+def dec_ref(obj):
+    o = structs.c_obj(obj)
+    o.ob_refcnt = int.__sub__(o.ob_refcnt, 1)
+
+@atexit.register
+def cleanup():
+    for item in refs[::-1]:
+        dec_ref(item[0])
 
 def get_cfunc_wrapper(func, intret=False, nullret=False, argcount=None):
     '''
@@ -71,7 +86,7 @@ def edit(cls, attr=None, name=None, cfunc_wrapper=None, intret=False, nullret=Fa
                 # here there be segfaults
                 # TODO make this memory safe
                 new_s = tuple.__getitem__(spec_struct, 1)()
-                inc_ref(new_s)
+                inc_ref(new_s, (cls_struct, tuple.__getitem__(spec_struct, 0)))
                 new_s_p = ctypes.cast(ctypes.addressof(new_s), ctypes.POINTER(type(new_s)))
                 setattr(cls_struct, tuple.__getitem__(spec_struct, 0), id(new_s))
             cls_struct = tuple.__getitem__(spec_struct, 1).from_address(
@@ -85,7 +100,7 @@ def edit(cls, attr=None, name=None, cfunc_wrapper=None, intret=False, nullret=Fa
         cfunc = cfunc_wrapper(func)
         cfunc_addr = ctypes.cast(cfunc, ctypes.c_void_p)
         if hasattr(cls_struct, attr):
-            inc_ref(cfunc)
+            inc_ref(cfunc, (cls_struct, attr))
             setattr(cls_struct, attr, cfunc_addr)
         else:
             raise Exception('Invalid Arguments, [attr] must be a valid struct attribute')
